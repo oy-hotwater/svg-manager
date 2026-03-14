@@ -1,0 +1,14 @@
+# GitHub Copilotに読み込ませないための ignore file
+
+# 特定のファイルを除外
+secrets.json
+.env
+.env.*
+
+# 特定のディレクトリ配下をすべて無視
+certs/
+legacy_code/
+
+# 特定の拡張子を無視
+*.log
+*.pdf
