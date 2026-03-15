@@ -8,11 +8,11 @@
 
 ### **主な機能**
 
-* **リアルタイム保存:** Firestoreとの連携によるクラウド保存と自動同期。  
-* **インスタント・プレビュー:** 保存したSVGをグリッド一覧で即座に視覚化。  
-* **スマート・コピー:** ワンクリックでクリップボードへSVGコードを出力。  
-* **ダイナミック・キャンバス:** 背景色を自由に変更でき、白抜きアイコンなどの視認性を確保。  
-* **Docker対応:** 環境構築不要で、コンテナ上で即座に開発環境が立ち上がります。
+- **リアルタイム保存:** Firestoreとの連携によるクラウド保存と自動同期。
+- **インスタント・プレビュー:** 保存したSVGをグリッド一覧で即座に視覚化。
+- **スマート・コピー:** ワンクリックでクリップボードへSVGコードを出力。
+- **ダイナミック・キャンバス:** 背景色を自由に変更でき、白抜きアイコンなどの視認性を確保。
+- **Docker対応:** 環境構築不要で、コンテナ上で即座に開発環境が立ち上がります。
 
 ## **Demo Movie**
 
@@ -20,14 +20,14 @@ https://github.com/user-attachments/assets/d714183d-87c3-4a9e-bd04-b973112b2491
 
 ## **使用技術 (Tech Stack)**
 
-| カテゴリ | 技術 |
-| :---- | :---- |
-| **Frontend** | React (Vite) |
-| **Styling** | Tailwind CSS |
-| **Icons** | Lucide React |
-| **Backend** | Firebase (Firestore, Authentication) |
-| **Environment** | Docker / Docker Compose |
-| **CI/CD / Tooling** | ESLint, PostCSS |
+| カテゴリ            | 技術                                 |
+| :------------------ | :----------------------------------- |
+| **Frontend**        | React (Vite)                         |
+| **Styling**         | Tailwind CSS                         |
+| **Icons**           | Lucide React                         |
+| **Backend**         | Firebase (Firestore, Authentication) |
+| **Environment**     | Docker / Docker Compose              |
+| **CI/CD / Tooling** | ESLint, PostCSS                      |
 
 ## **ディレクトリ構成の意図**
 
@@ -35,27 +35,57 @@ https://github.com/user-attachments/assets/d714183d-87c3-4a9e-bd04-b973112b2491
 
 svg-manager/  
 ├── src/  
-│   ├── firebase.js  \# Firebaseの初期化と各サービスのExport。UIとロジックの分離。  
-│   ├── App.jsx      \# メインのアプリケーションロジック。状態管理とビューを担当。  
-│   ├── main.jsx     \# エントリーポイント。ReactのDOMマウント。  
-│   └── index.css    \# Tailwind CSSのディレクティブ定義。    
-├── Dockerfile       \# 開発環境のコンテナイメージ定義。  
+│ ├── firebase.js \# Firebaseの初期化と各サービスのExport。UIとロジックの分離。  
+│ ├── App.jsx \# メインのアプリケーションロジック。状態管理とビューを担当。  
+│ ├── main.jsx \# エントリーポイント。ReactのDOMマウント。  
+│ └── index.css \# Tailwind CSSのディレクティブ定義。  
+├── Dockerfile \# 開発環境のコンテナイメージ定義。  
 ├── docker-compose.yml \# ホットリロードや環境変数の注入を制御する実行設定。  
-├── .env.example     \# FirebaseのAPIキー情報のテンプレート。  
-└── .gitignore       \# セキュリティ事故を防ぐための厳格な除外設定。
+├── .env.example \# FirebaseのAPIキー情報のテンプレート。  
+└── .gitignore \# セキュリティ事故を防ぐための厳格な除外設定。
 
 ### **構成のこだわり**
 
-* **firebase.js の独立:** Firebaseの設定を1ファイルに隔離することで、APIキーの変更や初期化ロジックの修正が他のコードに影響を与えないように設計されています。  
-* **Dockerベースの開発:** ローカルマシンのNode.jsバージョンに依存せず、docker compose up だけで誰でも同じ環境を再現できます。  
-* **セキュリティの担保:** .env を Git から完全に除外する設定を .gitignore で徹底し、セキュリティ事故を未然に防いでいます。
+- **firebase.js の独立:** Firebaseの設定を1ファイルに隔離することで、APIキーの変更や初期化ロジックの修正が他のコードに影響を与えないように設計されています。
+- **Dockerベースの開発:** ローカルマシンのNode.jsバージョンに依存せず、docker compose up だけで誰でも同じ環境を再現できます。
+- **セキュリティの担保:** .env を Git から完全に除外する設定を .gitignore で徹底し、セキュリティ事故を未然に防いでいます。
+
+## 🔐 認証とセキュリティ (Authentication & Security)
+
+本アプリケーションは、個人のアセット管理を目的としているため、第三者の不正アクセスを防ぐ強固なセキュリティ設定を施しています。
+
+- **Googleログイン認証**:
+  一時的な匿名ログイン（Anonymous Auth）を廃止し、Googleアカウントを用いたOAuth認証（Google Auth）へ移行しました。これにより、デバイスやブラウザを変更しても自身のデータを安全に引き継いで管理できます。
+- **プライベートデータベース（アクセス制限）**:
+  Firestoreのセキュリティルールを厳格に設定し、**指定した特定のユーザー（自分自身）のUIDのデータベースにのみ**データの読み書き（Read/Write）を許可しています。
+
+### セキュリティルールの設定（デプロイ時の注意）
+
+ご自身の環境でこのプロジェクトを動かす場合は、Firebase Consoleの「Firestore Database」>「ルール」タブにて、以下の通りご自身のGoogleアカウントの `UID` をハードコードして設定してください。
+
+```javascript
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/svgs/{document=**} {
+      // 1. 認証済みであること
+      // 2. 指定した自分自身のUIDと完全に一致すること
+      // 3. リクエスト先のパスが自身のuserIdと一致すること
+      allow read, write: if request.auth != null
+                          && request.auth.uid == "ここに自身のFirebase Auth UIDを記述"
+                          && request.auth.uid == userId;
+    }
+  }
+}
+```
 
 ## **セットアップ手順**
 
 ### **1\. Firebaseの設定**
 
-1. [Firebase Console](https://console.firebase.google.com/) でプロジェクトを作成します。  
-2. Firestore Database と Authentication（匿名認証）を有効にします。  
+1. [Firebase Console](https://console.firebase.google.com/) でプロジェクトを作成します。
+2. Firestore Database と Google（グーグルアカウント認証）を有効にします。
 3. .env.example をコピーして .env を作成し、FirebaseのAPIキー情報を入力します。
 
 ### **2\. 起動 (Docker)**

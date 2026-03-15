@@ -12,7 +12,7 @@ import {
   Cloud,
   CloudOff,
 } from "lucide-react";
-import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import {
   collection,
   doc,
@@ -20,7 +20,7 @@ import {
   deleteDoc,
   onSnapshot,
 } from "firebase/firestore";
-import { auth, db } from "./firebase";
+import { auth, db, googleProvider } from "./firebase";
 
 /**
  * SvgViewer Component
@@ -46,14 +46,34 @@ export default function App() {
   const [newSvgName, setNewSvgName] = useState("");
   const [newSvgCode, setNewSvgCode] = useState("");
 
+  // ログイン状態の監視のみを行う
   useEffect(() => {
-    signInAnonymously(auth).catch((err) => console.error("Auth Error:", err));
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (!u) setIsLoading(false);
+      setIsLoading(false); // ユーザーの有無に関わらずローディングを解除
     });
     return () => unsubscribe();
   }, []);
+
+  // Googleログイン処理
+  const loginWithGoogle = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err) {
+      console.error("Login Error:", err);
+      showToast("ログインに失敗しました");
+    }
+  };
+
+  // ログアウト処理
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setSvgs([]); // ログアウト時に画面のデータをクリア
+    } catch (err) {
+      console.error("Logout Error:", err);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -145,10 +165,25 @@ export default function App() {
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200">
             {user ? (
-              <>
-                <Cloud size={16} className="text-green-500" />
-                <span className="text-xs font-bold text-green-700">Synced</span>
-              </>
+              <div className="flex items-center gap-3">
+                {/* ユーザーのアイコンと名前を表示 */}
+                {user.photoURL && (
+                  <img
+                    src={user.photoURL}
+                    alt="user"
+                    className="w-5 h-5 rounded-full"
+                  />
+                )}
+                <span className="text-xs font-bold text-gray-700">
+                  {user.displayName}
+                </span>
+                <button
+                  onClick={logout}
+                  className="text-xs text-red-500 font-bold hover:underline"
+                >
+                  ログアウト
+                </button>
+              </div>
             ) : (
               <>
                 <CloudOff size={16} className="text-red-400" />
@@ -165,7 +200,21 @@ export default function App() {
             <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-gray-400 font-medium">データを同期中...</p>
           </div>
+        ) : !user ? (
+          // 未ログイン時の画面
+          <div className="flex flex-col items-center justify-center py-32">
+            <h2 className="text-2xl font-black text-gray-800 mb-6">
+              ログインが必要です
+            </h2>
+            <button
+              onClick={loginWithGoogle}
+              className="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-2xl font-bold flex items-center gap-3 shadow-sm hover:bg-gray-50 transition-all"
+            >
+              Googleでログイン
+            </button>
+          </div>
         ) : view === "list" ? (
+          // SVG一覧画面
           <>
             <div className="flex justify-between items-end mb-10">
               <div>
