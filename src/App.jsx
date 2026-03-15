@@ -19,6 +19,7 @@ import {
   setDoc,
   deleteDoc,
   onSnapshot,
+  serverTimestamp, // 追加: Firebaseのサーバー時刻を使用する
 } from "firebase/firestore";
 import { auth, db, googleProvider } from "./firebase";
 
@@ -82,7 +83,16 @@ export default function App() {
       svgsRef,
       (snap) => {
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setSvgs(data.sort((a, b) => b.createdAt - a.createdAt));
+        // 既存データ(Date.now()による数値)と新規データ(Timestamp)の両方に対応したソート
+        setSvgs(
+          data.sort((a, b) => {
+            const getMillis = (val) => {
+              if (!val) return Date.now(); // サーバー保存待ち(pending)の時は最新として扱う
+              return val.toDate ? val.toDate().getTime() : val;
+            };
+            return getMillis(b.createdAt) - getMillis(a.createdAt);
+          }),
+        );
         setIsLoading(false);
       },
       (err) => {
@@ -113,7 +123,7 @@ export default function App() {
       await setDoc(doc(db, "users", user.uid, "svgs", id), {
         name: newSvgName.trim() || "Untitled",
         code: newSvgCode.trim(),
-        createdAt: Date.now(),
+        createdAt: serverTimestamp(),
       });
       setView("list");
       setNewSvgName("");
