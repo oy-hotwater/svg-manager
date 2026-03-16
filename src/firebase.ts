@@ -3,6 +3,7 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // .envファイルから安全に環境変数を読み込む (Vite独自の記法)
+// vite-env.d.ts の恩恵で、以下の環境変数はすべて確実に string 型として認識される
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
