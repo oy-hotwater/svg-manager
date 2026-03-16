@@ -9,7 +9,6 @@ import {
   Image as ImageIcon,
   Code,
   AlertTriangle,
-  Cloud,
   CloudOff,
 } from "lucide-react";
 import {
