@@ -12,22 +12,56 @@ import {
   Cloud,
   CloudOff,
 } from "lucide-react";
-import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
+import {
+  User,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
 import {
   collection,
   doc,
   setDoc,
   deleteDoc,
   onSnapshot,
-  serverTimestamp, // 追加: Firebaseのサーバー時刻を使用する
+  serverTimestamp, // Firebaseのサーバー時刻を使用する
+  Timestamp,
+  FieldValue,
 } from "firebase/firestore";
 import { auth, db, googleProvider } from "./firebase";
 
+// ==========================================
+// Type Definitions
+// ==========================================
+
+interface SvgItem {
+  id: string;
+  name: string;
+  code: string;
+  // FirestoreのTimestamp、保存直後のFieldValue、または互換用の数値を許容
+  createdAt: Timestamp | FieldValue | number | null | any;
+}
+
+interface SvgViewerProps {
+  code: string;
+  bgColor: string;
+  className?: string;
+}
+
+type ViewState = "list" | "add" | "detail";
+
+// ==========================================
+// Components
+// ==========================================
+
 /**
  * SvgViewer Component
- * コンポーネントの再生成を防ぐため、Appコンポーネントの外側で定義。
  */
-const SvgViewer = ({ code, bgColor, className = "" }) => (
+const SvgViewer: React.FC<SvgViewerProps> = ({
+  code,
+  bgColor,
+  className = "",
+}) => (
   <div
     className={`flex items-center justify-center overflow-hidden ${className} [&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-full [&>svg]:max-h-full`}
     style={{ backgroundColor: bgColor }}
@@ -36,20 +70,21 @@ const SvgViewer = ({ code, bgColor, className = "" }) => (
 );
 
 export default function App() {
-  const [view, setView] = useState("list");
-  const [svgs, setSvgs] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState(null);
-  const [selectedSvgId, setSelectedSvgId] = useState(null);
-  const [previewBgColor, setPreviewBgColor] = useState("#f3f4f6");
-  const [toastMessage, setToastMessage] = useState(null);
-  const [deleteTargetId, setDeleteTargetId] = useState(null);
-  const [newSvgName, setNewSvgName] = useState("");
-  const [newSvgCode, setNewSvgCode] = useState("");
+  // 厳格な型指定を追加
+  const [view, setView] = useState<ViewState>("list");
+  const [svgs, setSvgs] = useState<SvgItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [selectedSvgId, setSelectedSvgId] = useState<string | null>(null);
+  const [previewBgColor, setPreviewBgColor] = useState<string>("#f3f4f6");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [newSvgName, setNewSvgName] = useState<string>("");
+  const [newSvgCode, setNewSvgCode] = useState<string>("");
 
   // ログイン状態の監視のみを行う
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, (u: User | null) => {
       setUser(u);
       setIsLoading(false); // ユーザーの有無に関わらずローディングを解除
     });
@@ -57,7 +92,7 @@ export default function App() {
   }, []);
 
   // Googleログイン処理
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = async (): Promise<void> => {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err) {
@@ -67,7 +102,7 @@ export default function App() {
   };
 
   // ログアウト処理
-  const logout = async () => {
+  const logout = async (): Promise<void> => {
     try {
       await signOut(auth);
       setSvgs([]); // ログアウト時に画面のデータをクリア
@@ -82,13 +117,18 @@ export default function App() {
     const unsubscribe = onSnapshot(
       svgsRef,
       (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        // d.data() の戻り値を明示的にキャストして型安全を確保
+        const data = snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        })) as SvgItem[];
+
         // 既存データ(Date.now()による数値)と新規データ(Timestamp)の両方に対応したソート
         setSvgs(
           data.sort((a, b) => {
-            const getMillis = (val) => {
+            const getMillis = (val: any): number => {
               if (!val) return Date.now(); // サーバー保存待ち(pending)の時は最新として扱う
-              return val.toDate ? val.toDate().getTime() : val;
+              return val.toDate ? val.toDate().getTime() : Number(val);
             };
             return getMillis(b.createdAt) - getMillis(a.createdAt);
           }),
@@ -103,12 +143,15 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  const showToast = (m) => {
+  const showToast = (m: string): void => {
     setToastMessage(m);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const copyToClipboard = (text, e = null) => {
+  const copyToClipboard = (
+    text: string,
+    e?: React.MouseEvent<HTMLButtonElement>,
+  ): void => {
     if (e) e.stopPropagation();
     navigator.clipboard
       .writeText(text)
@@ -116,7 +159,7 @@ export default function App() {
       .catch((err) => console.error("Copy failed", err));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     if (!newSvgCode.trim() || !user) return;
     const id = crypto.randomUUID();
     try {
@@ -135,7 +178,7 @@ export default function App() {
     }
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (): Promise<void> => {
     if (!deleteTargetId || !user) return;
     try {
       await deleteDoc(doc(db, "users", user.uid, "svgs", deleteTargetId));
@@ -169,7 +212,9 @@ export default function App() {
             <input
               type="color"
               value={previewBgColor}
-              onChange={(e) => setPreviewBgColor(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setPreviewBgColor(e.target.value)
+              }
               className="w-6 h-6 cursor-pointer border-none bg-transparent"
             />
           </div>
@@ -273,7 +318,11 @@ export default function App() {
                       {svg.name}
                     </p>
                     <p className="text-[10px] text-gray-400 px-1 mt-1 font-mono">
-                      {new Date(svg.createdAt).toLocaleDateString()}
+                      {/* createdAtがまだ無い（保存直後）ケースのフォールバック */}
+                      {svg.createdAt &&
+                      typeof svg.createdAt.toDate === "function"
+                        ? svg.createdAt.toDate().toLocaleDateString()
+                        : new Date().toLocaleDateString()}
                     </p>
 
                     <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
@@ -317,7 +366,9 @@ export default function App() {
                   <input
                     type="text"
                     value={newSvgName}
-                    onChange={(e) => setNewSvgName(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setNewSvgName(e.target.value)
+                    }
                     placeholder="例: Home Icon"
                     className="w-full p-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none transition-all shadow-sm"
                   />
@@ -328,7 +379,9 @@ export default function App() {
                   </label>
                   <textarea
                     value={newSvgCode}
-                    onChange={(e) => setNewSvgCode(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      setNewSvgCode(e.target.value)
+                    }
                     placeholder="<svg>...</svg>"
                     className="w-full h-80 p-5 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none font-mono text-xs leading-relaxed shadow-sm resize-none"
                   />
