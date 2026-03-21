@@ -2,6 +2,10 @@
 
 ## **概要**
 
+SVGアセットをクラウド上で一元管理するためのシングルページアプリケーション(SPA)です。
+
+個人利用を前提とした強固なセキュリティ要件を満たすため、Firebaseと連携したセキュアなインフラストラクチャをコードベース(IaC)で構築しています。
+
 **SVG Manager** は、開発やデザインで頻繁に利用するSVGアセットをクラウド上で一元管理するための自分専用ソフトウェアです。
 
 ブラウザからSVGコードを直接貼り付けるだけで簡単に保存でき、プレビュー表示やワンクリックでのコピー機能を備えています。
@@ -59,26 +63,14 @@ svg-manager/
 - **プライベートデータベース（アクセス制限）**:
   Firestoreのセキュリティルールを厳格に設定し、**指定した特定のユーザー（自分自身）のUIDのデータベースにのみ**データの読み書き（Read/Write）を許可しています。
 
-### セキュリティルールの設定（デプロイ時の注意）
+## アーキテクチャとセキュリティ設計
 
-ご自身の環境でこのプロジェクトを動かす場合は、Firebase Consoleの「Firestore Database」>「ルール」タブにて、以下の通りご自身のGoogleアカウントの `UID` をハードコードして設定してください。
+本プロジェクトは、個人専用ツールとしての安全性を担保するため、以下の設計を採用しています。
+詳細な仕様については [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) を参照してください。
 
-```javascript
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId}/svgs/{document=**} {
-      // 1. 認証済みであること
-      // 2. 指定した自分自身のUIDと完全に一致すること
-      // 3. リクエスト先のパスが自身のuserIdと一致すること
-      allow read, write: if request.auth != null
-                          && request.auth.uid == "ここに自身のFirebase Auth UIDを記述"
-                          && request.auth.uid == userId;
-    }
-  }
-}
-```
+* 認証ロックダウン: 新規ユーザー登録を無効化し、特定の管理者UIDのみにアクセスを限定。
+* 動的セキュリティルール: CI/CDデプロイ時に環境変数からUIDを注入し、`firestore.rules` を動的に生成。リポジトリへのシークレット漏洩を防止。
+* 環境非依存の改行コード管理: Windows/Docker(Linux)間の互換性問題を排除するため、`.gitattributes` によるLF改行の強制。
 
 ## **セットアップ手順**
 
@@ -91,11 +83,24 @@ service cloud.firestore {
 ### **2\. 起動 (Docker)**
 
 Dockerが導入されている環境で以下を実行します。
-
-docker compose up \-d \--build
-
+```
+docker compose up -d --build
+```
 起動後、ブラウザで http://localhost:5173 にアクセスしてください。
+
+## デプロイ手順
+デプロイ処理はFirebase CLIとNode.jsのネイティブスクリプトによって自動化されています。
+
+コンテナ内部から以下のコマンドを実行することで、ルールの生成、ビルド、デプロイが順次実行されます。
+```bash
+# コンテナへのアクセス
+docker compose exec -it app bash
+```
+```bash
+# デプロイの実行
+npx firebase-tools deploy
+```
 
 ## **ライセンス**
 
-このプロジェクトは私用ソフトウェアとして構築されています。
+このプロジェクトは私用ソフトウェア兼ポートフォリオとして構築されています。
