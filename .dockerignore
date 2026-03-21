@@ -1,7 +1,16 @@
-node_modules
-dist
+node_modules/
+
+dist/
+.firebase/
+firebase-debug.log
+
 .git
-.env
+.gitignore
+
 README.md
+
 Dockerfile
 docker-compose.yml
+
+# 環境変数
+.env

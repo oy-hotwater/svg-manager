@@ -3,6 +3,12 @@ node_modules
 .pnp
 .pnp.js
 
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+firestore.rules
+
 # Dependencies
 dist
 dist-ssr
