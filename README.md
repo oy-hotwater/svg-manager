@@ -123,6 +123,9 @@ docker compose up -d --build
 # コンテナへのアクセス
 docker compose exec -it app bash
 
+# ブラウザを立ち上げずにログイン処理を開始
+npx firebase-tools login --no-localhost
+
 # ルールの生成（Node.jsの --env-file オプションを使用）
 npm run predeploy:rules
 
