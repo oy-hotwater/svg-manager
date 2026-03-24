@@ -27,6 +27,7 @@ export const SvgAdd: React.FC<SvgAddProps> = ({
     const trimmedCode = newSvgCode.trim();
     if (!trimmedCode) return null;
 
+    // SVG CODEを記入中にSVGの形式でないのなら注意を出すリアルタイムバリデーション(入力時検証)
     const lowerCode = trimmedCode.toLowerCase();
     if (!lowerCode.startsWith("<svg") || !lowerCode.endsWith("</svg>")) {
       return "SVGコードは <svg> で始まり </svg> で終わる必要があります。";
