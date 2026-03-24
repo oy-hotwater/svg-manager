@@ -1,10 +1,9 @@
 import { Timestamp, FieldValue } from "firebase/firestore";
 
-export interface SvgItem {
-  id: string;
+export interface SvgDocument {
   name: string;
   code: string;
-  createdAt: Timestamp | FieldValue | number | null;
+  createdAt: Timestamp | FieldValue | null;
 }
 
 // UI（コンポーネント）層で扱う加工済みデータの型
