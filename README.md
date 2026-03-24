@@ -20,14 +20,16 @@ https://github.com/user-attachments/assets/d714183d-87c3-4a9e-bd04-b973112b2491
 
 ## 使用技術 (Tech Stack)
 
-| カテゴリ | 技術 |
-| :--- | :--- |
-| **Frontend** | React 19 (Vite, TypeScript) |
-| **Styling** | Tailwind CSS |
-| **Icons** | Lucide React |
-| **Backend** | Firebase (Firestore, Authentication) |
-| **Environment** | Docker / Docker Compose |
-| **Tooling** | ESLint, PostCSS, Node.js (v20+) |
+| カテゴリ        | 技術                                 |
+| :-------------- | :----------------------------------- |
+| **Frontend**    | React 19 (Vite, TypeScript)          |
+| **Styling**     | Tailwind CSS                         |
+| **Icons**       | Lucide React                         |
+| **Backend**     | Firebase (Firestore, Authentication) |
+| **Environment** | Docker / Docker Compose              |
+| **Testing**     | Vitest, React Testing Library        |
+| **CI/CD**       | GitHub Actions                       |
+| **Tooling**     | ESLint, PostCSS, Node.js (v20+)      |
 
 ## 開発経緯
 
@@ -54,15 +56,29 @@ https://github.com/user-attachments/assets/d714183d-87c3-4a9e-bd04-b973112b2491
 
 [comparison-with-existing-svg-management-tools.md](docs/comparison-with-existing-svg-management-tools.md)
 
+## システムアーキテクチャと品質保証
+
+保守性、拡張性、および堅牢性を厳しく精査し、以下の設計原則と仕組みを導入しています。
+
+- **責務の分離**: UIコンポーネント(`SvgList`, `SvgAdd`, `SvgDetail`)とビジネスロジックを分離し、データフェッチや認証処理はカスタムフック(`useAuth`, `useSvgs`)にカプセル化しています。
+- **型定義の厳格化**: TypeScriptによる型安全性を確保し、データ層とUI層の型を明確に区別しています。
+- **堅牢なバリデーションとエラーハンドリング**: SVG入力時のパース検証や環境変数のアサーションを実施し、エラー発生時には要因に応じた適切なフィードバックをUI上に表示します。
+- **自動テストとCI/CD**: `Vitest`を用いたユニットテストを実装し、`GitHub Actions`による静的解析、型チェック、テスト、および自動デプロイのパイプラインを構築しています。
+
 ## ディレクトリ構成の意図
 
 プロジェクトの保守性と拡張性を厳しく精査し、以下のディレクトリ構造を採用しています。
 
 ```text
 svg-manager/
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml     # GitHub ActionsによるCI/CDパイプライン定義。
 ├── src/
-│   ├── firebase.ts       # Firebaseの初期化と各サービスのExport。UIとロジックの分離。
-│   ├── App.tsx           # メインのアプリケーションロジック。状態管理とビューを担当。
+│   ├── components/       # UIコンポーネント。ビューの描画ロジックをカプセル化。
+│   ├── hooks/            # カスタムフック。状態管理とFirebase等の副作用を分離。
+│   ├── firebase.ts       # Firebaseの初期化と各サービスのExport。
+│   ├── App.tsx           # アプリケーションの全体レイアウトとルーティング。
 │   ├── main.tsx          # エントリーポイント。ReactのDOMマウント。
 │   └── index.css         # Tailwind CSSのディレクティブ定義。
 ├── docs/
@@ -77,6 +93,7 @@ svg-manager/
 
 ### **構成のこだわり**
 
+- **ロジックとUIの分離**: カスタムフックとコンポーネントディレクトリを明確に分けることで、コードの可読性とテスト容易性を向上させています。
 - **Firebase設定の独立**: `firebase.ts`に設定を隔離することで、APIキーの変更や初期化ロジックの修正が他へ影響を与えない設計。
 - **Dockerベースの開発**: ローカルマシンの依存関係を排除し、`docker compose up` のみで開発環境を再現可能。Windows環境でのホットリロードにも対応。
 - **セキュリティの担保**: `.env` をGit管理から完全に除外する設定を `.gitignore` で徹底。
@@ -116,9 +133,11 @@ docker compose up -d --build
 起動後、ブラウザで http://localhost:5173 にアクセスしてください。
 
 ## デプロイ手順
-デプロイ処理はFirebase CLIとNode.jsのネイティブスクリプトによって自動化されています。
 
-コンテナ内部から以下のコマンドを実行することで、ルールの生成、ビルド、デプロイが順次実行されます。
+GitHub ActionsによるCI/CDパイプラインが構築されているため、`main` ブランチへのコードマージをトリガーとして、静的解析とテストの通過後にFirebase Hostingへ自動デプロイが実行されます。
+
+手動でデプロイを実行する場合は、コンテナ内部から以下のコマンドを実行してください。
+
 ```bash
 # コンテナへのアクセス
 docker compose exec -it app bash
