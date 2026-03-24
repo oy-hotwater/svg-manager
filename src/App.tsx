@@ -12,10 +12,18 @@ import { SvgList } from "./components/SvgList";
 import { SvgAdd } from "./components/SvgAdd";
 import { SvgDetail } from "./components/SvgDetail";
 import { ViewState } from "./types";
+import { getFirebaseErrorMessage } from "./utils/errorHandler";
 
 export default function App() {
   const { user, isAuthLoading, loginWithGoogle, logout } = useAuth();
-  const { svgs, isSvgsLoading, addSvg, removeSvg } = useSvgs(user?.uid);
+  // エラーを取り出す
+  const {
+    svgs,
+    isSvgsLoading,
+    error: svgsError,
+    addSvg,
+    removeSvg,
+  } = useSvgs(user?.uid);
 
   const [view, setView] = useState<ViewState>("list");
   const [selectedSvgId, setSelectedSvgId] = useState<string | null>(null);
@@ -55,7 +63,8 @@ export default function App() {
       setNewSvgCode("");
       showToast("保存しました");
     } catch (err) {
-      showToast("保存に失敗しました");
+      // ユーティリティ経由で詳細なエラーを表示
+      showToast(getFirebaseErrorMessage(err, "保存に失敗しました"));
     }
   };
 
@@ -67,11 +76,30 @@ export default function App() {
       setDeleteTargetId(null);
       showToast("削除しました");
     } catch (err) {
-      showToast("削除に失敗しました");
+      // ユーティリティ経由で詳細なエラーを表示
+      showToast(getFirebaseErrorMessage(err, "削除に失敗しました"));
+    }
+  };
+
+  // ログイン処理のエラーハンドリング
+  const handleLogin = async () => {
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      showToast(getFirebaseErrorMessage(err, "ログインに失敗しました"));
     }
   };
 
   const isLoading = isAuthLoading || (user && isSvgsLoading);
+
+  // ログアウト処理のエラーハンドリング
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (err) {
+      showToast(getFirebaseErrorMessage(err, "ログアウトに失敗しました"));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 selection:bg-blue-100 font-sans">
@@ -112,7 +140,7 @@ export default function App() {
                   {user.displayName}
                 </span>
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="text-xs text-red-500 font-bold hover:underline"
                 >
                   ログアウト
@@ -129,6 +157,14 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto p-6">
+        {/* Firestoreの同期エラー（権限不足やネットワーク切断）を画面上部に表示 */}
+        {svgsError && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg shadow-sm flex items-center gap-3">
+            <AlertTriangle className="text-red-500" size={20} />
+            <p className="text-red-700 font-bold text-sm">{svgsError}</p>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
             <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -140,7 +176,7 @@ export default function App() {
               ログインが必要です
             </h2>
             <button
-              onClick={loginWithGoogle}
+              onClick={handleLogin}
               className="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-2xl font-bold flex items-center gap-3 shadow-sm hover:bg-gray-50 transition-all"
             >
               Googleでログイン
