@@ -6,9 +6,10 @@ import {
   deleteDoc,
   onSnapshot,
   serverTimestamp,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { SvgItem } from "../types";
+import { SvgItem, SvgDocument } from "../types";
 
 export const useSvgs = (userId: string | undefined) => {
   const [svgs, setSvgs] = useState<SvgItem[]>([]);
@@ -26,18 +27,32 @@ export const useSvgs = (userId: string | undefined) => {
     const unsubscribe = onSnapshot(
       svgsRef,
       (snap) => {
-        const data = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as SvgItem[];
+        const data: SvgItem[] = snap.docs.map((d) => {
+          const rawData = d.data() as SvgDocument;
+
+          // TimestampからData型への安全な変換
+          let parsedDate: Date | null = null;
+          if (rawData.createdAt instanceof Timestamp) {
+            parsedDate = rawData.createdAt.toDate();
+          } else if (rawData.createdAt) {
+            // FieldValue（serverTimestamp）など、ローカルキャッシュ適用前の暫定対応
+            parsedDate = new Date();
+          }
+
+          return {
+            id: d.id,
+            name: rawData.name,
+            code: rawData.code,
+            createdAt: parsedDate,
+          };
+        });
 
         setSvgs(
           data.sort((a, b) => {
-            const getMillis = (val: any): number => {
-              if (!val) return Date.now();
-              return val.toDate ? val.toDate().getTime() : Number(val);
+            const getTime = (val: Date | null): number => {
+              return val ? val.getTime() : Date.now();
             };
-            return getMillis(b.createdAt) - getMillis(a.createdAt);
+            return getTime(b.createdAt) - getTime(a.createdAt);
           }),
         );
         setIsSvgsLoading(false);
@@ -53,11 +68,12 @@ export const useSvgs = (userId: string | undefined) => {
   const addSvg = async (name: string, code: string): Promise<void> => {
     if (!userId) throw new Error("User not authenticated");
     const id = crypto.randomUUID();
-    await setDoc(doc(db, "users", userId, "svgs", id), {
-      name: name.trim() || "Untitled",
+    const newDoc: SvgDocument = {
+      name: name.trim() || "untitled",
       code: code.trim(),
       createdAt: serverTimestamp(),
-    });
+    };
+    await setDoc(doc(db, "users", userId, "svgs", id), newDoc);
   };
 
   const removeSvg = async (svgId: string): Promise<void> => {
