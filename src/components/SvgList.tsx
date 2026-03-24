@@ -72,8 +72,8 @@ export const SvgList: React.FC<SvgListProps> = ({
                 {svg.name}
               </p>
               <p className="text-[10px] text-gray-400 px-1 mt-1 font-mono">
-                {svg.createdAt && typeof svg.createdAt.toDate === "function"
-                  ? svg.createdAt.toDate().toLocaleDateString()
+                {svg.createdAt
+                  ? svg.createdAt.toLocaleDateString()
                   : new Date().toLocaleDateString()}
               </p>
               <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
