@@ -8,7 +8,10 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "predeploy:rules": "node --env-file=.env scripts/generate-rules.js"
+    "predeploy:rules": "node --env-file=.env scripts/generate-rules.js",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "firebase": "^12.10.0",
