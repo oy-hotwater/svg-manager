@@ -10,10 +10,12 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { SvgItem, SvgDocument } from "../types";
+import { getFirebaseErrorMessage } from "../utils/errorHandler"; // ユーティリティをインポート
 
 export const useSvgs = (userId: string | undefined) => {
   const [svgs, setSvgs] = useState<SvgItem[]>([]);
   const [isSvgsLoading, setIsSvgsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null); // エラー状態を追加
 
   useEffect(() => {
     if (!userId) {
@@ -23,6 +25,8 @@ export const useSvgs = (userId: string | undefined) => {
     }
 
     setIsSvgsLoading(true);
+    setError(null); // 初期化時にエラーをクリア
+
     const svgsRef = collection(db, "users", userId, "svgs");
     const unsubscribe = onSnapshot(
       svgsRef,
@@ -55,10 +59,13 @@ export const useSvgs = (userId: string | undefined) => {
             return getTime(b.createdAt) - getTime(a.createdAt);
           }),
         );
+        setError(null); // 正常に取得できた場合はエラーをクリア
         setIsSvgsLoading(false);
       },
       (err) => {
         console.error("Firestore Error:", err);
+        // エラーコードに応じて適切なメッセージをセット
+        setError(getFirebaseErrorMessage(err, "データの同期に失敗しました"));
         setIsSvgsLoading(false);
       },
     );
@@ -81,5 +88,5 @@ export const useSvgs = (userId: string | undefined) => {
     await deleteDoc(doc(db, "users", userId, "svgs", svgId));
   };
 
-  return { svgs, isSvgsLoading, addSvg, removeSvg };
+  return { svgs, isSvgsLoading, error, addSvg, removeSvg };
 };
