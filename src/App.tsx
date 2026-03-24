@@ -42,7 +42,12 @@ export default function App() {
   };
 
   const handleSave = async (): Promise<void> => {
-    if (!newSvgCode.trim()) return;
+    // UI側のボタン非活性と合わせて、ロジック層でも厳密にブロックする
+    if (!newSvgName.trim() || !newSvgCode.trim()) {
+      showToast("アセット名とSVGコードを入力してください");
+      return;
+    }
+
     try {
       await addSvg(newSvgName, newSvgCode);
       setView("list");
